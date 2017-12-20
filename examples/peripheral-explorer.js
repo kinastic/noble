@@ -1,11 +1,13 @@
 const async = require('async');
-const noble = require('../index');
+const NobleFactory = require('../index');
 
-const peripheralIdOrAddress = process.argv[2].toLowerCase();
+const noble = NobleFactory(0, true);
+
+const peripheralIdOrAddress = 'e7:fe:e0:76:fa:c1';
 
 noble.on('stateChange', function(state) {
   if (state === 'poweredOn') {
-    noble.startScanning();
+    noble.startScanning([], true);
   } else {
     noble.stopScanning();
   }
@@ -57,8 +59,8 @@ function explore(peripheral) {
     process.exit(0);
   });
 
-  peripheral.connect(function(error) {
-    peripheral.discoverServices([], function(error, services) {
+  peripheral.connect((error) =>{
+    peripheral.discoverServices([], (error, services) => {
       let serviceIndex = 0;
 
       async.whilst(
@@ -74,7 +76,7 @@ function explore(peripheral) {
           }
           console.log(serviceInfo);
 
-          service.discoverCharacteristics([], function(error, characteristics) {
+          service.discoverCharacteristics([], (error, characteristics) => {
             let characteristicIndex = 0;
 
             async.whilst(
@@ -91,7 +93,7 @@ function explore(peripheral) {
 
                 async.series([
                   function(callback) {
-                    characteristic.discoverDescriptors(function(error, descriptors) {
+                    characteristic.discoverDescriptors((error, descriptors) => {
                       async.detect(
                         descriptors,
                         function(descriptor, callback) {
