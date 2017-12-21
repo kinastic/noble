@@ -1,6 +1,7 @@
 const NobleFactory = require('../index');
 
 const noble = NobleFactory(0, true);
+noble.init();
 
 noble.on('stateChange', (state) => {
   if (state === 'poweredOn') {

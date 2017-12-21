@@ -2,10 +2,11 @@ const async = require('async');
 const NobleFactory = require('../index');
 
 const noble = NobleFactory(0, true);
+noble.init();
 
-const peripheralIdOrAddress = 'e7:fe:e0:76:fa:c1';
+const peripheralIdOrAddress = 'cd:89:6c:f6:86:47';
 
-noble.on('stateChange', function(state) {
+noble.on('stateChange', (state) => {
   if (state === 'poweredOn') {
     noble.startScanning([], true);
   } else {
@@ -13,9 +14,9 @@ noble.on('stateChange', function(state) {
   }
 });
 
-noble.on('discover', function(peripheral) {
+noble.on('discover', async (peripheral) => {
   if (peripheral.id === peripheralIdOrAddress || peripheral.address === peripheralIdOrAddress) {
-    noble.stopScanning();
+    await noble.stopScanning();
 
     console.log('peripheral with ID ' + peripheral.id + ' found');
     const advertisement = peripheral.advertisement;
@@ -52,103 +53,75 @@ noble.on('discover', function(peripheral) {
   }
 });
 
-function explore(peripheral) {
+const explore = async (peripheral) => {
   console.log('services and characteristics:');
 
-  peripheral.on('disconnect', function() {
-    process.exit(0);
-  });
+  // peripheral.on('disconnect', function() {
+  //   process.exit(0);
+  // });
 
-  peripheral.connect((error) =>{
-    peripheral.discoverServices([], (error, services) => {
-      let serviceIndex = 0;
+  try {
+    await peripheral.connect();
+    console.log('Connected to: ' + peripheral.uuid);
+    const services = await peripheral.discoverServices([]);
 
-      async.whilst(
-        function () {
-          return (serviceIndex < services.length);
-        },
-        function(callback) {
-          const service = services[serviceIndex];
-          let serviceInfo = service.uuid;
+    for (const service of services) {
+      let serviceInfo = service.uuid;
 
-          if (service.name) {
-            serviceInfo += ' (' + service.name + ')';
-          }
-          console.log(serviceInfo);
+      if (service.name) {
+        serviceInfo += ' (' + service.name + ')';
+      }
+      console.log(serviceInfo);
 
-          service.discoverCharacteristics([], (error, characteristics) => {
-            let characteristicIndex = 0;
+      const characteristics = await service.discoverCharacteristics([]);
 
-            async.whilst(
-              function () {
-                return (characteristicIndex < characteristics.length);
-              },
-              function(callback) {
-                const characteristic = characteristics[characteristicIndex];
-                let characteristicInfo = '  ' + characteristic.uuid;
+      for (const characteristic of characteristics) {
+        let characteristicInfo = '  ' + characteristic.uuid;
 
-                if (characteristic.name) {
-                  characteristicInfo += ' (' + characteristic.name + ')';
-                }
-
-                async.series([
-                  function(callback) {
-                    characteristic.discoverDescriptors((error, descriptors) => {
-                      async.detect(
-                        descriptors,
-                        function(descriptor, callback) {
-                          return callback(descriptor.uuid === '2901');
-                        },
-                        function(userDescriptionDescriptor){
-                          if (userDescriptionDescriptor) {
-                            userDescriptionDescriptor.readValue(function(error, data) {
-                              if (data) {
-                                characteristicInfo += ' (' + data.toString() + ')';
-                              }
-                              callback();
-                            });
-                          } else {
-                            callback();
-                          }
-                        }
-                      );
-                    });
-                  },
-                  function(callback) {
-                        characteristicInfo += '\n    properties  ' + characteristic.properties.join(', ');
-
-                    if (characteristic.properties.indexOf('read') !== -1) {
-                      characteristic.read(function(error, data) {
-                        if (data) {
-                          const string = data.toString('ascii');
-
-                          characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
-                        }
-                        callback();
-                      });
-                    } else {
-                      callback();
-                    }
-                  },
-                  function() {
-                    console.log(characteristicInfo);
-                    characteristicIndex++;
-                    callback();
-                  }
-                ]);
-              },
-              function(error) {
-                serviceIndex++;
-                callback();
-              }
-            );
-          });
-        },
-        function (err) {
-          peripheral.disconnect();
+        if (characteristic.name) {
+          characteristicInfo += ' (' + characteristic.name + ')';
         }
-      );
-    });
-  });
-}
+
+        characteristicInfo += '\n    properties  ' + characteristic.properties.join(', ');
+
+        if (characteristic.properties.indexOf('read') !== -1) {
+          try {
+            const data = await characteristic.read();
+            if (data) {
+              const string = data.toString('ascii');
+
+              characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
+            }
+          } catch (err) {
+
+          }
+        }
+
+        // characteristic.discoverDescriptors((error, descriptors) => {
+        //   async.detect(
+        //     descriptors,
+        //     function(descriptor, callback) {
+        //       return callback(descriptor.uuid === '2901');
+        //     },
+        //     function(userDescriptionDescriptor){
+        //       if (userDescriptionDescriptor) {
+        //         userDescriptionDescriptor.readValue(function(error, data) {
+        //           if (data) {
+        //             characteristicInfo += ' (' + data.toString() + ')';
+        //           }
+        //           callback();
+        //         });
+        //       } else {
+        //         callback();
+        //       }
+        //     }
+        //   );
+        // });
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    peripheral.disconnect();
+  }
+};
 
