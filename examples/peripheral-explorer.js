@@ -5,6 +5,7 @@ const noble = NobleFactory(0, true);
 noble.init();
 
 const peripheralIdOrAddress = 'cd:89:6c:f6:86:47';
+let found = false;
 
 noble.on('stateChange', (state) => {
   if (state === 'poweredOn') {
@@ -15,7 +16,8 @@ noble.on('stateChange', (state) => {
 });
 
 noble.on('discover', async (peripheral) => {
-  if (peripheral.id === peripheralIdOrAddress || peripheral.address === peripheralIdOrAddress) {
+  if (!found && (peripheral.id === peripheralIdOrAddress || peripheral.address === peripheralIdOrAddress)) {
+    found = true;
     await noble.stopScanning();
 
     console.log('peripheral with ID ' + peripheral.id + ' found');
@@ -65,6 +67,8 @@ const explore = async (peripheral) => {
     console.log('Connected to: ' + peripheral.uuid);
     const services = await peripheral.discoverServices([]);
 
+    let chara = null;
+
     for (const service of services) {
       let serviceInfo = service.uuid;
 
@@ -78,6 +82,10 @@ const explore = async (peripheral) => {
       for (const characteristic of characteristics) {
         let characteristicInfo = '  ' + characteristic.uuid;
 
+        if (characteristic.uuid === 'f0000003de94078fe31135b1ee4fdb15') {
+          chara = characteristic;
+        }
+
         if (characteristic.name) {
           characteristicInfo += ' (' + characteristic.name + ')';
         }
@@ -85,17 +93,18 @@ const explore = async (peripheral) => {
         characteristicInfo += '\n    properties  ' + characteristic.properties.join(', ');
 
         if (characteristic.properties.indexOf('read') !== -1) {
-          try {
-            const data = await characteristic.read();
-            if (data) {
-              const string = data.toString('ascii');
-
-              characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
-            }
-          } catch (err) {
-
-          }
+          // try {
+          //   const data = await characteristic.read();
+          //   if (data) {
+          //     const string = data.toString('ascii');
+          //
+          //     characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
+          //   }
+          // } catch (err) {
+          //
+          // }
         }
+        console.log(characteristicInfo);
 
         // characteristic.discoverDescriptors((error, descriptors) => {
         //   async.detect(
@@ -118,6 +127,19 @@ const explore = async (peripheral) => {
         //   );
         // });
       }
+    }
+    if (chara) {
+      chara.on('data', (data) => {
+        console.log(data);
+      });
+      chara.subscribe();
+
+      setTimeout(async () => {
+        await peripheral.disconnect();
+        setTimeout(() => {
+          explore(peripheral);
+        }, 1000);
+      }, 1000);
     }
   } catch (err) {
     console.error(err);
