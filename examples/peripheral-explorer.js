@@ -4,7 +4,8 @@ const NobleFactory = require('../index');
 const noble = NobleFactory(0, true);
 noble.init();
 
-const peripheralIdOrAddress = 'cd:89:6c:f6:86:47';
+// const peripheralIdOrAddress = 'cd:89:6c:f6:86:47'; // 000026
+const peripheralIdOrAddress = 'fa:df:6d:8d:87:fe'; // 000103
 let found = false;
 
 noble.on('stateChange', (state) => {
@@ -16,11 +17,11 @@ noble.on('stateChange', (state) => {
 });
 
 noble.on('discover', async (peripheral) => {
-  if (!found && (peripheral.id === peripheralIdOrAddress || peripheral.address === peripheralIdOrAddress)) {
+  if (!found && peripheral.address === peripheralIdOrAddress) {
     found = true;
     await noble.stopScanning();
 
-    console.log('peripheral with ID ' + peripheral.id + ' found');
+    console.log('peripheral with ID ' + peripheral.address + ' found');
     const advertisement = peripheral.advertisement;
 
     const localName = advertisement.localName;
@@ -51,16 +52,21 @@ noble.on('discover', async (peripheral) => {
 
     console.log();
 
-    explore(peripheral);
+    startExploring(peripheral);
   }
 });
 
+const startExploring = (peripheral) => {
+  peripheral.on('disconnect', () => {
+    setTimeout(() => {
+      explore(peripheral);
+    }, 500);
+  });
+  explore(peripheral);
+};
+
 const explore = async (peripheral) => {
   console.log('services and characteristics:');
-
-  // peripheral.on('disconnect', function() {
-  //   process.exit(0);
-  // });
 
   try {
     await peripheral.connect();
@@ -136,9 +142,6 @@ const explore = async (peripheral) => {
 
       setTimeout(async () => {
         await peripheral.disconnect();
-        setTimeout(() => {
-          explore(peripheral);
-        }, 1000);
       }, 1000);
     }
   } catch (err) {
