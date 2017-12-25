@@ -1,28 +1,34 @@
-var async = require('async');
-var noble = require('../index');
+const async = require('async');
+const NobleFactory = require('../index');
 
-var peripheralIdOrAddress = process.argv[2].toLowerCase();
+const noble = NobleFactory(0, true);
+noble.init();
 
-noble.on('stateChange', function(state) {
+const peripheralIdOrAddress = 'cd:89:6c:f6:86:47'; // 000026
+// const peripheralIdOrAddress = 'fa:df:6d:8d:87:fe'; // 000103
+let found = false;
+
+noble.on('stateChange', (state) => {
   if (state === 'poweredOn') {
-    noble.startScanning();
+    noble.startScanning([], true);
   } else {
     noble.stopScanning();
   }
 });
 
-noble.on('discover', function(peripheral) {
-  if (peripheral.id === peripheralIdOrAddress || peripheral.address === peripheralIdOrAddress) {
-    noble.stopScanning();
+noble.on('discover', async (peripheral) => {
+  if (!found && peripheral.address === peripheralIdOrAddress) {
+    found = true;
+    await noble.stopScanning();
 
-    console.log('peripheral with ID ' + peripheral.id + ' found');
-    var advertisement = peripheral.advertisement;
+    console.log('peripheral with ID ' + peripheral.address + ' found');
+    const advertisement = peripheral.advertisement;
 
-    var localName = advertisement.localName;
-    var txPowerLevel = advertisement.txPowerLevel;
-    var manufacturerData = advertisement.manufacturerData;
-    var serviceData = advertisement.serviceData;
-    var serviceUuids = advertisement.serviceUuids;
+    const localName = advertisement.localName;
+    const txPowerLevel = advertisement.txPowerLevel;
+    const manufacturerData = advertisement.manufacturerData;
+    const serviceData = advertisement.serviceData;
+    const serviceUuids = advertisement.serviceUuids;
 
     if (localName) {
       console.log('  Local Name        = ' + localName);
@@ -46,107 +52,103 @@ noble.on('discover', function(peripheral) {
 
     console.log();
 
-    explore(peripheral);
+    startExploring(peripheral);
   }
 });
 
-function explore(peripheral) {
+const startExploring = (peripheral) => {
+  peripheral.source.subscribe(({ event, payload }) => {
+    if (event === 'disconnect') {
+      setTimeout(() => {
+        explore(peripheral);
+      }, 500);
+    }
+  });
+  explore(peripheral);
+};
+
+const explore = async (peripheral) => {
   console.log('services and characteristics:');
 
-  peripheral.on('disconnect', function() {
-    process.exit(0);
-  });
+  try {
+    await peripheral.connect();
+    console.log('Connected to: ' + peripheral.address);
+    const services = await peripheral.discoverServices([]);
 
-  peripheral.connect(function(error) {
-    peripheral.discoverServices([], function(error, services) {
-      var serviceIndex = 0;
+    let chara = null;
 
-      async.whilst(
-        function () {
-          return (serviceIndex < services.length);
-        },
-        function(callback) {
-          var service = services[serviceIndex];
-          var serviceInfo = service.uuid;
+    for (const service of services) {
+      let serviceInfo = service.uuid;
 
-          if (service.name) {
-            serviceInfo += ' (' + service.name + ')';
-          }
-          console.log(serviceInfo);
+      if (service.name) {
+        serviceInfo += ' (' + service.name + ')';
+      }
+      console.log(serviceInfo);
 
-          service.discoverCharacteristics([], function(error, characteristics) {
-            var characteristicIndex = 0;
+      const characteristics = await service.discoverCharacteristics([]);
 
-            async.whilst(
-              function () {
-                return (characteristicIndex < characteristics.length);
-              },
-              function(callback) {
-                var characteristic = characteristics[characteristicIndex];
-                var characteristicInfo = '  ' + characteristic.uuid;
+      for (const characteristic of characteristics) {
+        let characteristicInfo = '  ' + characteristic.uuid;
 
-                if (characteristic.name) {
-                  characteristicInfo += ' (' + characteristic.name + ')';
-                }
-
-                async.series([
-                  function(callback) {
-                    characteristic.discoverDescriptors(function(error, descriptors) {
-                      async.detect(
-                        descriptors,
-                        function(descriptor, callback) {
-                          return callback(descriptor.uuid === '2901');
-                        },
-                        function(userDescriptionDescriptor){
-                          if (userDescriptionDescriptor) {
-                            userDescriptionDescriptor.readValue(function(error, data) {
-                              if (data) {
-                                characteristicInfo += ' (' + data.toString() + ')';
-                              }
-                              callback();
-                            });
-                          } else {
-                            callback();
-                          }
-                        }
-                      );
-                    });
-                  },
-                  function(callback) {
-                        characteristicInfo += '\n    properties  ' + characteristic.properties.join(', ');
-
-                    if (characteristic.properties.indexOf('read') !== -1) {
-                      characteristic.read(function(error, data) {
-                        if (data) {
-                          var string = data.toString('ascii');
-
-                          characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
-                        }
-                        callback();
-                      });
-                    } else {
-                      callback();
-                    }
-                  },
-                  function() {
-                    console.log(characteristicInfo);
-                    characteristicIndex++;
-                    callback();
-                  }
-                ]);
-              },
-              function(error) {
-                serviceIndex++;
-                callback();
-              }
-            );
-          });
-        },
-        function (err) {
-          peripheral.disconnect();
+        if (characteristic.uuid === 'f0000003de94078fe31135b1ee4fdb15') {
+          chara = characteristic;
         }
-      );
-    });
-  });
-}
+
+        if (characteristic.name) {
+          characteristicInfo += ' (' + characteristic.name + ')';
+        }
+
+        characteristicInfo += '\n    properties  ' + characteristic.properties.join(', ');
+
+        if (characteristic.properties.indexOf('read') !== -1) {
+          // try {
+          //   const data = await characteristic.read();
+          //   if (data) {
+          //     const string = data.toString('ascii');
+          //
+          //     characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
+          //   }
+          // } catch (err) {
+          //
+          // }
+        }
+        console.log(characteristicInfo);
+
+        // characteristic.discoverDescriptors((error, descriptors) => {
+        //   async.detect(
+        //     descriptors,
+        //     function(descriptor, callback) {
+        //       return callback(descriptor.uuid === '2901');
+        //     },
+        //     function(userDescriptionDescriptor){
+        //       if (userDescriptionDescriptor) {
+        //         userDescriptionDescriptor.readValue(function(error, data) {
+        //           if (data) {
+        //             characteristicInfo += ' (' + data.toString() + ')';
+        //           }
+        //           callback();
+        //         });
+        //       } else {
+        //         callback();
+        //       }
+        //     }
+        //   );
+        // });
+      }
+    }
+    if (chara) {
+      chara.source.subscribe(({ payload }) => {
+        console.log(payload);
+      });
+      await chara.subscribe();
+
+      setTimeout(async () => {
+        await peripheral.disconnect();
+      }, 1000);
+    }
+  } catch (err) {
+    console.error(err);
+    peripheral.disconnect();
+  }
+};
 

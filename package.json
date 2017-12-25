@@ -29,7 +29,8 @@
     "win32"
   ],
   "dependencies": {
-    "debug": "~2.2.0"
+    "debug": "~2.2.0",
+    "rxjs": "^5.5.5"
   },
   "optionalDependencies": {
     "bluetooth-hci-socket": "^0.5.1",
@@ -37,11 +38,12 @@
     "xpc-connection": "~0.1.4"
   },
   "devDependencies": {
+    "async": "~0.2.9",
     "jshint": "latest",
     "mocha": "~1.8.2",
+    "prettier": "^1.9.2",
     "should": "~1.2.2",
     "sinon": "~1.6.0",
-    "async": "~0.2.9",
     "ws": "~0.4.31"
   },
   "scripts": {
@@ -50,5 +52,10 @@
   },
   "browser": {
     "./lib/resolve-bindings.js": "./lib/resolve-bindings-web.js"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all",
+    "printWidth": 100
   }
 }

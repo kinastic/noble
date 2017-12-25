@@ -1,37 +1,36 @@
-var noble = require('../index');
+const NobleFactory = require('../index');
 
-noble.on('stateChange', function(state) {
+const noble = NobleFactory(0, true);
+noble.init();
+
+noble.on('stateChange', (state) => {
   if (state === 'poweredOn') {
-    noble.startScanning();
+    noble.startScanning([], true);
   } else {
     noble.stopScanning();
   }
 });
 
-noble.on('discover', function(peripheral) {
+noble.on('discover', (peripheral) => {
   console.log('peripheral discovered (' + peripheral.id +
               ' with address <' + peripheral.address +  ', ' + peripheral.addressType + '>,' +
               ' connectable ' + peripheral.connectable + ',' +
               ' RSSI ' + peripheral.rssi + ':');
-  console.log('\thello my local name is:');
-  console.log('\t\t' + peripheral.advertisement.localName);
-  console.log('\tcan I interest you in any of the following advertised services:');
+  console.log('\tname is: ' + peripheral.advertisement.localName);
   console.log('\t\t' + JSON.stringify(peripheral.advertisement.serviceUuids));
 
-  var serviceData = peripheral.advertisement.serviceData;
+  const { advertisement: { serviceData, manufacturerData, txPowerLevel } } = peripheral;
   if (serviceData && serviceData.length) {
     console.log('\there is my service data:');
-    for (var i in serviceData) {
-      console.log('\t\t' + JSON.stringify(serviceData[i].uuid) + ': ' + JSON.stringify(serviceData[i].data.toString('hex')));
+    for (const service of serviceData) {
+      console.log('\t\t' + JSON.stringify(service.uuid) + ': ' + JSON.stringify(service.data.toString('hex')));
     }
   }
-  if (peripheral.advertisement.manufacturerData) {
-    console.log('\there is my manufacturer data:');
-    console.log('\t\t' + JSON.stringify(peripheral.advertisement.manufacturerData.toString('hex')));
+  if (manufacturerData) {
+    console.log('\there is my manufacturer data: ' + JSON.stringify(manufacturerData.toString('hex')));
   }
-  if (peripheral.advertisement.txPowerLevel !== undefined) {
-    console.log('\tmy TX power level is:');
-    console.log('\t\t' + peripheral.advertisement.txPowerLevel);
+  if (txPowerLevel) {
+    console.log('\tmy TX power level is: ' + txPowerLevel);
   }
 
   console.log();
