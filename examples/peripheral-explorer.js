@@ -4,8 +4,8 @@ const NobleFactory = require('../index');
 const noble = NobleFactory(0, true);
 noble.init();
 
-// const peripheralIdOrAddress = 'cd:89:6c:f6:86:47'; // 000026
-const peripheralIdOrAddress = 'fa:df:6d:8d:87:fe'; // 000103
+const peripheralIdOrAddress = 'cd:89:6c:f6:86:47'; // 000026
+// const peripheralIdOrAddress = 'fa:df:6d:8d:87:fe'; // 000103
 let found = false;
 
 noble.on('stateChange', (state) => {
@@ -57,10 +57,12 @@ noble.on('discover', async (peripheral) => {
 });
 
 const startExploring = (peripheral) => {
-  peripheral.on('disconnect', () => {
-    setTimeout(() => {
-      explore(peripheral);
-    }, 500);
+  peripheral.source.subscribe(({ event, payload }) => {
+    if (event === 'disconnect') {
+      setTimeout(() => {
+        explore(peripheral);
+      }, 500);
+    }
   });
   explore(peripheral);
 };
@@ -70,7 +72,7 @@ const explore = async (peripheral) => {
 
   try {
     await peripheral.connect();
-    console.log('Connected to: ' + peripheral.uuid);
+    console.log('Connected to: ' + peripheral.address);
     const services = await peripheral.discoverServices([]);
 
     let chara = null;
@@ -135,10 +137,10 @@ const explore = async (peripheral) => {
       }
     }
     if (chara) {
-      chara.on('data', (data) => {
-        console.log(data);
+      chara.source.subscribe(({ payload }) => {
+        console.log(payload);
       });
-      chara.subscribe();
+      await chara.subscribe();
 
       setTimeout(async () => {
         await peripheral.disconnect();
