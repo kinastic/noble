@@ -124,7 +124,7 @@ const explore = async (peripheral) => {
       setTimeout(async () => {
         subscription.unsubscribe();
         await peripheral.disconnect();
-      }, 30000);
+      }, 2000);
     }
   } catch (err) {
     console.error(err);
