@@ -101,39 +101,18 @@ const explore = async (peripheral) => {
         characteristicInfo += '\n    properties  ' + characteristic.properties.join(', ');
 
         if (characteristic.properties.indexOf('read') !== -1) {
-          // try {
-          //   const data = await characteristic.read();
-          //   if (data) {
-          //     const string = data.toString('ascii');
-          //
-          //     characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
-          //   }
-          // } catch (err) {
-          //
-          // }
+          try {
+            const data = await characteristic.read();
+            if (data) {
+              const string = data.toString('ascii');
+
+              characteristicInfo += '\n    value       ' + data.toString('hex') + ' | \'' + string + '\'';
+            }
+          } catch (err) {
+
+          }
         }
         console.log(characteristicInfo);
-
-        // characteristic.discoverDescriptors((error, descriptors) => {
-        //   async.detect(
-        //     descriptors,
-        //     function(descriptor, callback) {
-        //       return callback(descriptor.uuid === '2901');
-        //     },
-        //     function(userDescriptionDescriptor){
-        //       if (userDescriptionDescriptor) {
-        //         userDescriptionDescriptor.readValue(function(error, data) {
-        //           if (data) {
-        //             characteristicInfo += ' (' + data.toString() + ')';
-        //           }
-        //           callback();
-        //         });
-        //       } else {
-        //         callback();
-        //       }
-        //     }
-        //   );
-        // });
       }
     }
     if (chara) {
@@ -145,7 +124,7 @@ const explore = async (peripheral) => {
       setTimeout(async () => {
         subscription.unsubscribe();
         await peripheral.disconnect();
-      }, 1000);
+      }, 30000);
     }
   } catch (err) {
     console.error(err);
