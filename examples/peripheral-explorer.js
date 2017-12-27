@@ -1,7 +1,7 @@
 const async = require('async');
 const NobleFactory = require('../index');
 
-const noble = NobleFactory(0, true);
+const noble = NobleFactory(0, false);
 noble.init();
 
 const peripheralIdOrAddress = 'cd:89:6c:f6:86:47'; // 000026
@@ -137,12 +137,13 @@ const explore = async (peripheral) => {
       }
     }
     if (chara) {
-      chara.source.subscribe(({ payload }) => {
+      const subscription = chara.source.subscribe(({ payload }) => {
         console.log(payload);
       });
       await chara.subscribe();
 
       setTimeout(async () => {
+        subscription.unsubscribe();
         await peripheral.disconnect();
       }, 1000);
     }
