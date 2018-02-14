@@ -4,9 +4,10 @@ const NobleFactory = require('../index');
 const noble = NobleFactory(0, false);
 noble.init();
 
-const addresses = ['cd:89:6c:f6:86:47', 'e7:fe:e0:76:fa:c1', 'e8:3b:b5:33:3c:4c', 'e8:b9:1a:26:5b:3a']; // 000026
+// const addresses = ['cd:89:6c:f6:86:47', 'e7:fe:e0:76:fa:c1', 'e8:3b:b5:33:3c:4c', 'e8:b9:1a:26:5b:3a']; // 000026
+const addresses = ['cd:89:6c:f6:86:47']; // 000026
 // const peripheralIdOrAddress = 'fa:df:6d:8d:87:fe'; // 000103
-const address = 'e7:fe:e0:76:fa:c1'; // 000110
+// const address = 'e7:fe:e0:76:fa:c1'; // 000110
 // e8:3b:b5:33:3c:4c // 000112
 // e8:b9:1a:26:5b:3a // 000104
 const found = [];
@@ -74,13 +75,13 @@ const startExploring = (peripheral) => {
   explore(peripheral);
 };
 
-const explore = async (peripheral) =>
+const explore = async (peripheral) => {
   console.log('services and characteristics:');
 
   try {
     await peripheral.connect();
     console.log('Connected to: ' + peripheral.address);
-    const services = await peripheral.discoverServices([]);
+    const services = await peripheral.discoverServices(['f0000001de94078fe31135b1ee4fdb15']);
 
     let chara = null;
 

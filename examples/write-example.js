@@ -9,7 +9,9 @@ noble.init();
 // const address = 'e7:fe:e0:76:fa:c1'; // 000110
 // e8:3b:b5:33:3c:4c // 000112
 // e8:b9:1a:26:5b:3a // 000104
-const address = 'cd:89:6c:f6:86:47'; // 000026
+// const address = 'cd:89:6c:f6:86:47'; // 000026
+// const address = 'f8:82:57:59:df:41'; // 000100
+const address = 'd5:46:0e:c9:f2:60'; // 000114
 const found = [];
 
 noble.on('stateChange', (state) => {
@@ -115,8 +117,13 @@ const explore = async (peripheral) => {
       const data = await chara.read();
       const { data: arr } = data.toJSON();
       console.log(`DATA: `, arr);
+      // const test = "000026";
+      // const arrData = [];
+      // for (let i = 0; i < test.length; i++ ) {
+      //   arrData.push(test[i].charCodeAt(0));
+      // }
       arr[0] = 4;
-      // await chara.write(new Buffer(arr));
+      await chara.write(new Buffer(arr));
 
       // setTimeout(async () => {
       //   subscription.unsubscribe();
